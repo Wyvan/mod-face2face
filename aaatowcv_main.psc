@@ -2,6 +2,7 @@ Scriptname aaatowCV_Main extends ReferenceAlias
 
 Import Game
 Import towPlugin
+Import Utility
 
 GlobalVariable Property gvAFP  Auto  
 ;コンソールより set aaatowCVAPV to 1 で有効
@@ -15,6 +16,17 @@ GlobalVariable Property gvCA Auto
 ;コンソールより set aaatowCVCA to 1 で有効
 ;カメラ変更時にNPCに注目する
 
+GlobalVariable Property gvSP Auto  
+;set aaatowCVSP to 0.8 でデフォルトに戻す
+;fMouseWheelZoomSpeed:Camera
+
+GlobalVariable Property gvFoV Auto
+GlobalVariable[] Property gvFovDist Auto
+
+
+float fZoomSpeedIni
+float fZoomSpeed
+
 bool bFP
 bool bAPV
 bool bABK
@@ -26,15 +38,17 @@ float fRotX
 int iPovKeyCode
 float fAngleF = 120.0
 ;前方角度。この範囲外はSmoothするとカメラがNPCを外れた所にSmoothするため、カメラの移動のみ処理。ForceFirstPersonして終わらせる。
+;もっと良い処理はないものか…
 
 int _iLeft = 0
 int _iRight = 1
-			
-Event OnInit()
-	RegisterForMenu("Dialogue Menu")
-EndEvent
 
-Event OnPlayerLoadGame()
+float fFov
+float fFovDef
+float fDist
+
+Event OnInit()
+	RegisterForCameraState()
 	RegisterForMenu("Dialogue Menu")
 EndEvent
 
@@ -43,16 +57,29 @@ Event OnMenuOpen(string menuName)
 		Return
 	endif
 
+	fFovDef = GetCurrentFOV()
+	if fFovDef == 0.0
+		fFovDef = GetDefaultFOV()
+		if fFovDef == 0.0
+			fFovDef = 65.0
+		endif
+	endif
+	fZoomSpeedIni = GetINIFloat("fMouseWheelZoomSpeed:Camera")
+	if fZoomSpeedIni == 0.0
+		fZoomSpeedIni = 0.8	; default speed
+	endif
+
 	Actor aPlayer = Game.GetPlayer()
 
 	bAPV = gvAFP.GetValue() as bool
 	bABK = gvABK.GetValue() as bool
 	bCA = gvCA.GetValue() as bool
+	fZoomSpeed = gvSP.GetValue() as float
 
 	iPovKeyCode = Input.GetMappedKey("Toggle POV")
 	RegisterForKey(iPovKeyCode)
 
-	bFP = aPlayer.GetAnimationVariableInt("i1stPerson") as bool
+	bFP = !GetCameraState()
 	fRotZ = aPlayer.GetAngleZ()
 	fRotX = aPlayer.GetAngleX()
 
@@ -61,15 +88,24 @@ Event OnMenuOpen(string menuName)
 		if aTarget != None
 			int[] iAngle = new int[2]
 			iAngle = AjeCam(fAngleF)
+			SetINIFloat("fMouseWheelZoomSpeed:Camera", fZoomSpeed)
 			if bCA
-				if !(aPlayer.getHeadingAngle(aTarget) < iAngle[_iRight] && aPlayer.getHeadingAngle(aTarget) > iAngle[_iLeft]) && bCA
-					PlayerLookAtNode(aTarget, "NPC Neck [Neck]",500)
-					utility.wait(0.5)
-					ForceFirstPerson()
+				float fwait = 1000
+				if !(aPlayer.getHeadingAngle(aTarget) < iAngle[_iRight] && aPlayer.getHeadingAngle(aTarget) > iAngle[_iLeft])
+					fwait = 500
+				endif
+
+				if aPlayer.GetSitState() == 3 && gvFoV.GetValue() == 1.0
+					fDist = aPlayer.GetDistance(aTarget)
 				else
-					PlayerLookAtNode(aTarget, "NPC Neck [Neck]")
-					utility.wait(0.5)
-					ForceFirstPersonSmooth()
+					fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",fwait)
+					wait(0.5)
+				endif
+
+				if fwait == 500
+					ForceFP(3.0)
+				else
+					ForceFP(fZoomSpeed)
 				endif
 			endif
 		endif
@@ -81,47 +117,117 @@ Event OnMenuClose(string menuName)
 		Return
 	endif
 
-	Actor aPlayer = Game.GetPlayer()
-	bool bFPNow = aPlayer.GetAnimationVariableInt("i1stPerson") as bool
-	
 	UnregisterForKey(iPovKeyCode)
-
-	if bABK && (bFPNow != bFP)
-		if bFPNow
-			ForceThirdPersonSmooth()
+	bool bFPNow = !GetCameraState()
+	if bABK
+		if bFPNow == True
+			if bFP == False
+				ForceTP(fZoomSpeed)
+			endif
 		else
-			ForceFirstPersonSmooth()
+			if bFP == True
+				ForceFP(fZoomSpeed)
+			endif
 		endif
+		wait(0.5)
+		SetINIFloat("fMouseWheelZoomSpeed:Camera", fZoomSpeedIni)
 	endif
 EndEvent
 
-Event OnKeyDown(Int iKeyCode)
-	Actor aPlayer = Game.GetPlayer()
 
+Event OnKeyDown(Int iKeyCode)
+; 	Actor aPlayer = Game.GetPlayer()
 
 	if iKeyCode == iPovKeyCode
-		if aPlayer.GetAnimationVariableInt("i1stPerson") as bool
-			ForceThirdPersonSmooth()
-			SetCameraAngle(fRotZ, fRotX)
+		if !GetCameraState()
+			ForceTP(fZoomSpeed)
+; 			SetCameraAngle(fRotZ, fRotX)
 		else
-			ForceFirstPersonSmooth()
-			utility.wait(0.5)
+			ForceFP(fZoomSpeed)
+			wait(0.5)
 			if bCA
 				Actor aTarget = GetPlayerDialogueTarget()
-				PlayerLookAtNode(aTarget, "NPC Neck [Neck]")
+				fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]")
 			endif
 		endif
 	endif
 EndEvent
 
+
+; Event OnSit(ObjectReference akFurniture)
+; 	if akFurniture.HasKeyword(FurnitureForce3rdPerson)
+; 		debug.Notification("We just sat on " + akFurniture)
+; 		bForce3rdFurniture = true
+; 	endif
+; endEvent
+
+Event OnPlayerCameraState(int oldState, int newState)
+	if gvFoV.GetValue() == 0.0
+		return
+	elseif GetPlayer().IsInKillMove()
+		return
+	endif
+
+	if newState == 0 && oldState == 9	;FP
+		Actor aTarget = GetPlayerDialogueTarget()
+		if aTarget != None
+			int index = GetArrayNum(fDist)
+			if index != -1
+				fFov = gvFovDist[index].GetValue()
+				SetCurrentFOV(fFov)
+			endif
+			PlayerLookAtNode(aTarget, "NPC Neck [Neck]",2000)
+		endif
+	elseif newState == 9 && oldState == 0
+		if fFov != 0.0
+			if fFovDef != GetCurrentFOV()
+				SetCurrentFOV(fFovdef)
+				fFov = 0.0
+			endif
+		endif
+	endif
+EndEvent
+
+Function ForceFP(float fSpeed)
+	if fSpeed == 3.0
+		ForceFirstPerson()
+	else
+		ForceFirstPersonSmooth()
+	endif
+endFunction
+
+Function ForceTP(float fSpeed)
+	if fSpeed == 3.0
+		ForceThirdPersonEX()
+	else
+		ForceThirdPersonSmooth()
+	endif
+endFunction
+
+int Function GetArrayNum(float fDistance)
+	if fDistance <= 50
+		return 0
+	elseif fDistance >= 51 && fDistance <= 75
+		return 1
+	elseif fDistance >= 76 && fDistance <= 100
+		return 2
+	elseif fDistance >= 101 && fDistance <= 125
+		return 3
+	elseif fDistance >= 126 && fDistance <= 150
+		return 4
+	elseif fDistance >= 151
+		return 5
+	endif
+endFunction
+		
 int[] Function AjeCam(float fSet)
 	float fShoulderX	;crosshairがプレイヤーから見てどちらにあるか。 左側<0.0 真ん中<右側
 	Actor aPlayer = Game.GetPlayer()
 
 	if aPlayer.IsWeaponDrawn()
-		fShoulderX = Utility.GetINIFloat("fOverShoulderCombatPosX:Camera")
+		fShoulderX = GetINIFloat("fOverShoulderCombatPosX:Camera")
 	else
-		fShoulderX = Utility.GetINIFloat("fOverShoulderPosX:Camera")
+		fShoulderX = GetINIFloat("fOverShoulderPosX:Camera")
 	endif
 
 	int[] iResult = new int[2]

@@ -3,52 +3,52 @@ Scriptname aaatowCV_MCM extends SKI_ConfigBase
 import Utility
 
 GlobalVariable Property gvAPV  Auto
-GlobalVariable Property gvABK  Auto
-GlobalVariable Property gvCVCA  Auto
 GlobalVariable Property gvCVSP Auto
 GlobalVariable Property gvFoV Auto
 GlobalVariable[] Property gvFovDist Auto
 
-int iActivateID
-int iAutomaticID
+int iActionID
 int iZoomSpeedID
 int iChangeFovID
 
-bool bActivate
-bool bAutomatic
-float fZoomSpeed
+int iAction
 bool bChangeFov
+
+float fZoomSpeed
 
 int[] iFovDistID
 float[] fFovDist
 float[] fFovDistDef
 
+String[] strPV
+
 int function GetVersion()
-	return 1
+	return 2
 endFunction
 
 Event OnVersionUpdate(int a_version)
 
+	if (a_version >= 2 && CurrentVersion < 2)
+		strPV = new string[3]
+		strPV[0] = "Do Nothing"
+		strPV[1] = "First Person"
+		strPV[2] = "Third Person"
+	endif
 endEvent
 
 Event OnConfigInit()
-	if gvAPV.getvalue() > 0
-		bAutomatic = True
-	endif
-
-; 	bActivate = True
 	fZoomSpeed = GetINIFloat("fMouseWheelZoomSpeed:Camera")
 	if fZoomSpeed > 3.0
 		fZoomSpeed = 3.0
 	endif
 	
 	iFovDistID = new int[6]
-
 	fFovDist = new float[6]
 	int index = 0
 	while index < gvFovDist.length
 		fFovDist[index] = gvFovDist[index].GetValue()
 		index += 1
+		wait(0.05)
 	endWhile
 
 	fFovDistDef = new float[6]
@@ -59,6 +59,10 @@ Event OnConfigInit()
 	fFovDistDef[4] = 25
 	fFovDistDef[5] = 20
 
+	strPV = new string[3]
+	strPV[0] = "Do Nothing"
+	strPV[1] = "First Person"
+	strPV[2] = "Third Person"
 endEvent
 
 Event OnPageReset(String a_Page)
@@ -69,8 +73,7 @@ Event OnPageReset(String a_Page)
 
 	SetCursorFillMode(TOP_TO_BOTTOM)
 	AddHeaderOption("Face to face conversation")
-; 	iActivateID = AddToggleOption("Activate", bActivate, OPTION_FLAG_DISABLED)
-	iAutomaticID = AddToggleOption("Automatic", bAutomatic)
+	iActionID = AddTextOption("Action", strPV[iAction])
 	iChangeFovID = AddToggleOption("Change FoV by distance to speaker", bChangeFov)
 	iZoomSpeedID = AddSliderOption("Zoom Speed", fZoomSpeed, "{1}")
 
@@ -96,33 +99,18 @@ Event OnPageReset(String a_Page)
 endEvent
 
 event OnOptionSelect(int option)
-	If option == iActivateID
-		bActivate = !bActivate
-		SetToggleOptionValue(option, bActivate)
-	elseif option == iAutomaticID
-		bAutomatic = !bAutomatic
-		SetToggleOptionValue(option, bAutomatic)
+	if Option == iActionID
+		if iAction < strPV.length - 1
+			iAction += 1
+		else
+			iAction = 0
+		endif
+		SetTextOptionValue(option, strPV[iAction])
+		SetToggleOptionValue(option, bChangeFov)
 	elseif option == iChangeFovID
 		bChangeFov = !bChangeFov
 		SetToggleOptionValue(option, bChangeFov)
 		ForcePageReset()
-	endif
-endEvent
-
-event OnOptionSliderOpen(int option)
-	if (option == iZoomSpeedID)
-		SetSliderDialogStartValue(fZoomSpeed)
-		SetSliderDialogDefaultValue(0.8)
-		SetSliderDialogRange(0.6, 3.0)
-		SetSliderDialogInterval(0.1)
-	endif
-
-	int iCount = iFovDistID.find(option)
-	if iCount != -1
-		SetSliderDialogStartValue(fFovDist[iCount])
-		SetSliderDialogDefaultValue(fFovDistDef[iCount])
-		SetSliderDialogRange(10, 80)
-		SetSliderDialogInterval(1)
 	endif
 endEvent
 
@@ -135,32 +123,20 @@ event OnOptionSliderAccept(int option, float value)
 	int iCount = iFovDistID.find(option)
 	if iCount != -1
 		fFovDist[iCount] = value
-; 		float fTemp = value
 		SetSliderOptionValue(iFovDistID[iCount], fFovDist[iCount], "FoV {0}")
-; 		fFovDist[iCount] = fTemp
 	endif
 endEvent
 
 event OnOptionHighlight(int option)
-	if option == iActivateID
-; 		SetInfoText("activate")
-	elseIf option == iAutomaticID
-; 		SetInfoText("Autoatic")
-	elseif option == iZoomSpeedID
-; 		SetInfoText("ZoomSpeed")
+	If option == iActionID
+		SetInfoText("If you set this item, It will try to switch to setting when start a conversation with NPC.")
+	elseif option == iChangeFovID
+		SetInfoText("This feature needs to select 'First Person' of Action.")
 	endif
 endEvent
 
 Event OnConfigClose()
-	if bAutomatic
-		gvAPV.setvalue(1.0)
-		gvABK.setvalue(1.0)
-		gvCVCA.setvalue(1.0)
-	else
-		gvAPV.setvalue(0.0)
-		gvABK.setvalue(0.0)
-		gvCVCA.setvalue(0.0)
-	endif
+	gvAPV.Setvalue(iAction as float)
 	gvCVSP.Setvalue(fZoomSpeed)
 	gvFov.Setvalue(bChangeFov as float)
 
@@ -168,6 +144,6 @@ Event OnConfigClose()
 	while iCount < gvFovDist.length
 		gvFovDist[iCount].SetValue(fFovDist[iCount])
 		iCount += 1
+		waitmenumode(0.05)
 	endWhile
 EndEvent
-

@@ -56,7 +56,6 @@ Actor aTarget
 bool bFP
 bool bSit
 
-
 ; float fRotZ
 ; float fRotX
 float fAngleF = 120.0
@@ -78,6 +77,8 @@ Event OnMenuOpen(string menuName)
 	if (menuName != "Dialogue Menu")
 		return
 	endif
+
+	gotostate("Dialogue")
 
 	RegisterForKey(iPovKeyCode)
 	fFovIni = GetFov()
@@ -130,6 +131,8 @@ Event OnMenuClose(string menuName)
 	if menuName != "Dialogue Menu"
 		Return
 	endif
+
+	gotostate("")
 	UnregisterForKey(iPovKeyCode)
 	aTarget = None
 
@@ -157,6 +160,16 @@ Event OnMenuClose(string menuName)
 EndEvent
 
 
+Event OnKeyDown(Int iKeyCode)
+
+EndEvent
+
+
+Event OnPlayerCameraState(int oldState, int newState)
+
+endEvent
+
+State Dialogue
 Event OnKeyDown(Int iKeyCode)
 	if iKeyCode == iPovKeyCode
 		if !GetCameraState()
@@ -196,6 +209,7 @@ Event OnPlayerCameraState(int oldState, int newState)
 		endif
 	endif
 endEvent
+endState
 
 Function ForceFP(float fSpeed)
 	if fSpeed == 3.0

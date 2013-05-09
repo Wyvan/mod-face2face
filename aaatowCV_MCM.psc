@@ -1,7 +1,5 @@
 Scriptname aaatowCV_MCM extends SKI_ConfigBase  
 
-import Utility
-
 GlobalVariable Property gvAPV  Auto
 GlobalVariable Property gvCVSP Auto
 GlobalVariable Property gvFoV Auto
@@ -37,19 +35,14 @@ Event OnVersionUpdate(int a_version)
 endEvent
 
 Event OnConfigInit()
-	fZoomSpeed = GetINIFloat("fMouseWheelZoomSpeed:Camera")
-	if fZoomSpeed > 3.0
-		fZoomSpeed = 3.0
-	endif
-	
 	iFovDistID = new int[6]
 	fFovDist = new float[6]
-	int index = 0
-	while index < gvFovDist.length
-		fFovDist[index] = gvFovDist[index].GetValue()
-		index += 1
-		waitmenumode(0.05)
-	endWhile
+	fFovDist[0] = gvFovDist[0].GetValue()
+	fFovDist[1] = gvFovDist[1].GetValue()
+	fFovDist[2] = gvFovDist[2].GetValue()
+	fFovDist[3] = gvFovDist[3].GetValue()
+	fFovDist[4] = gvFovDist[4].GetValue()
+	fFovDist[5] = gvFovDist[5].GetValue()
 
 	fFovDistDef = new float[6]
 	fFovDistDef[0] = 45
@@ -69,6 +62,11 @@ Event OnPageReset(String a_Page)
 ; 	If a_Page == ""
 ; 	endif
 
+	fZoomSpeed = Utility.GetINIFloat("fMouseWheelZoomSpeed:Camera")
+	if fZoomSpeed > 3.0
+		fZoomSpeed = 3.0
+	endif
+	
 ; 	======================== LEFT ========================
 
 	SetCursorFillMode(TOP_TO_BOTTOM)
@@ -114,6 +112,23 @@ event OnOptionSelect(int option)
 	endif
 endEvent
 
+event OnOptionSliderOpen(int option)
+	if (option == iZoomSpeedID)
+		SetSliderDialogStartValue(fZoomSpeed)
+		SetSliderDialogDefaultValue(0.8)
+		SetSliderDialogRange(0.6, 3.0)
+		SetSliderDialogInterval(0.1)
+	endif
+
+	int iCount = iFovDistID.find(option)
+	if iCount != -1
+		SetSliderDialogStartValue(fFovDist[iCount])
+		SetSliderDialogDefaultValue(fFovDistDef[iCount])
+		SetSliderDialogRange(10, 80)
+		SetSliderDialogInterval(1)
+	endif
+endEvent
+
 event OnOptionSliderAccept(int option, float value)
 	if (option == iZoomSpeedID)
 		fZoomSpeed = value
@@ -140,10 +155,11 @@ Event OnConfigClose()
 	gvCVSP.Setvalue(fZoomSpeed)
 	gvFov.Setvalue(bChangeFov as float)
 
-	int iCount = 0
-	while iCount < gvFovDist.length
-		gvFovDist[iCount].SetValue(fFovDist[iCount])
-		iCount += 1
-		waitmenumode(0.05)
-	endWhile
+	gvFovDist[0].SetValue(fFovDist[0])
+	gvFovDist[1].SetValue(fFovDist[1])
+	gvFovDist[2].SetValue(fFovDist[2])
+	gvFovDist[3].SetValue(fFovDist[3])
+	gvFovDist[4].SetValue(fFovDist[4])
+	gvFovDist[5].SetValue(fFovDist[5])
+
 EndEvent

@@ -1,16 +1,19 @@
 Scriptname aaatowCV_MCM extends SKI_ConfigBase  
 
 GlobalVariable Property gvAPV  Auto
+GlobalVariable Property gvTR Auto
 GlobalVariable Property gvCVSP Auto
 GlobalVariable Property gvFoV Auto
 GlobalVariable[] Property gvFovDist Auto
 
 int iActionID
+int iTrackingID
 int iZoomSpeedID
 int iChangeFovID
 
 int iAction
 bool bChangeFov
+int iTracking
 
 float fZoomSpeed
 
@@ -19,9 +22,10 @@ float[] fFovDist
 float[] fFovDistDef
 
 String[] strPV
+String[] strTR
 
 int function GetVersion()
-	return 2
+	return 3
 endFunction
 
 Event OnVersionUpdate(int a_version)
@@ -31,6 +35,13 @@ Event OnVersionUpdate(int a_version)
 		strPV[0] = "Do Nothing"
 		strPV[1] = "First Person"
 		strPV[2] = "Third Person"
+	endif
+
+	if (a_version >= 3 && CurrentVersion < 3)
+		strTR = new string[2]
+		strTR[0] = "Do Nothing"
+		strTR[1] = "Tracking"
+; 		strTR[2] = "Approach(wip)"
 	endif
 endEvent
 
@@ -56,12 +67,14 @@ Event OnConfigInit()
 	strPV[0] = "Do Nothing"
 	strPV[1] = "First Person"
 	strPV[2] = "Third Person"
+
+	strTR = new string[2]
+	strTR[0] = "Do Nothing"
+	strTR[1] = "Tracking"
+; 	strTR[2] = "Approach(wip)"
 endEvent
 
 Event OnPageReset(String a_Page)
-; 	If a_Page == ""
-; 	endif
-
 	fZoomSpeed = Utility.GetINIFloat("fMouseWheelZoomSpeed:Camera")
 	if fZoomSpeed > 3.0
 		fZoomSpeed = 3.0
@@ -72,13 +85,14 @@ Event OnPageReset(String a_Page)
 	SetCursorFillMode(TOP_TO_BOTTOM)
 	AddHeaderOption("Face to face conversation")
 	iActionID = AddTextOption("Action", strPV[iAction])
+	iTrackingID = AddTextOption("Tracking", strTR[iTracking])
 	iChangeFovID = AddToggleOption("Change FoV by distance to speaker", bChangeFov)
 	iZoomSpeedID = AddSliderOption("Zoom Speed", fZoomSpeed, "{1}")
 
 ; 	======================== RIGHT ========================
 	SetCursorPosition(1)
 	if bChangeFov
-		AddHeaderOption("Change FoV setting by distance.", OPTION_FLAG_NONE)
+		AddHeaderOption("Change Fov setting by distance.", OPTION_FLAG_NONE)
 		iFovDistID[0] = AddSliderOption("50 Unit or less", fFovDist[0], "FoV {0}", OPTION_FLAG_NONE)
 		iFovDistID[1] = AddSliderOption("Between 50 and 75", fFovDist[1], "FoV {0}", OPTION_FLAG_NONE)
 		iFovDistID[2] = AddSliderOption("Between 75 and 100", fFovDist[2], "FoV {0}", OPTION_FLAG_NONE)
@@ -98,22 +112,20 @@ endEvent
 
 event OnOptionSelect(int option)
 	if Option == iActionID
-		if iAction < strPV.length - 1
-			iAction += 1
-		else
-			iAction = 0
-		endif
+		iAction = SetNumArray(strPV, iAction)
 		SetTextOptionValue(option, strPV[iAction])
-		SetToggleOptionValue(option, bChangeFov)
 	elseif option == iChangeFovID
 		bChangeFov = !bChangeFov
 		SetToggleOptionValue(option, bChangeFov)
 		ForcePageReset()
+	elseif option == iTrackingID
+		iTracking = SetNumArray(strTR, iTracking)
+		SetTextOptionValue(option, strTR[iTracking])
 	endif
 endEvent
 
 event OnOptionSliderOpen(int option)
-	if (option == iZoomSpeedID)
+	if option == iZoomSpeedID
 		SetSliderDialogStartValue(fZoomSpeed)
 		SetSliderDialogDefaultValue(0.8)
 		SetSliderDialogRange(0.6, 3.0)
@@ -147,6 +159,8 @@ event OnOptionHighlight(int option)
 		SetInfoText("If you set this item, It will try to switch to setting when start a conversation with NPC.")
 	elseif option == iChangeFovID
 		SetInfoText("This feature needs to select 'First Person' of Action.")
+	elseif option == iZoomSpeedID
+		SetInfoText("3.0 = Instant.")
 	endif
 endEvent
 
@@ -154,6 +168,7 @@ Event OnConfigClose()
 	gvAPV.Setvalue(iAction as float)
 	gvCVSP.Setvalue(fZoomSpeed)
 	gvFov.Setvalue(bChangeFov as float)
+	gvTR.Setvalue(iTracking as float)
 
 	gvFovDist[0].SetValue(fFovDist[0])
 	gvFovDist[1].SetValue(fFovDist[1])
@@ -161,5 +176,14 @@ Event OnConfigClose()
 	gvFovDist[3].SetValue(fFovDist[3])
 	gvFovDist[4].SetValue(fFovDist[4])
 	gvFovDist[5].SetValue(fFovDist[5])
-
 EndEvent
+
+
+int Function SetNumArray(String[] strs,int iCur)
+	if iCur < strs.length - 1
+		iCur += 1
+	else
+		iCur = 0
+	endif
+	Return iCur
+endFunction

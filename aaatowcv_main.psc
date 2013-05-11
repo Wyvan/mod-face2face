@@ -7,6 +7,7 @@ Import Utility
 GlobalVariable Property gvAPV  Auto
 GlobalVariable Property gvSP Auto	;fMouseWheelZoomSpeed:Camera
 GlobalVariable Property gvFoV Auto
+GlobalVariable Property gvTR Auto
 GlobalVariable[] Property gvFovDist Auto
 
 float property fAPV Hidden
@@ -18,6 +19,12 @@ EndProperty
 bool property bAPV Hidden
 	bool Function Get()
 		Return gvAPV.GetValue() as bool
+	EndFunction
+EndProperty
+
+float property fTR Hidden
+	float Function Get()
+		Return gvTR.GetValue()
 	EndFunction
 EndProperty
 
@@ -78,8 +85,7 @@ Event OnMenuOpen(string menuName)
 		return
 	endif
 
-	gotostate("Dialogue")
-
+	gotostate("dialogue")
 	RegisterForKey(iPovKeyCode)
 	fFovIni = GetFov()
 	
@@ -123,6 +129,9 @@ Event OnMenuOpen(string menuName)
 					ChangePV("TP", fwait)
 				endif
 			endif
+			if fTR >= 1.0
+				RegisterforSingleupdate(1.0)
+			endif
 		endif
 	endif
 EndEvent
@@ -159,17 +168,32 @@ Event OnMenuClose(string menuName)
 	SetINIFloat("fMouseWheelZoomSpeed:Camera", fZoomSpeedIni)
 EndEvent
 
-
-Event OnKeyDown(Int iKeyCode)
-
-EndEvent
-
-
-Event OnPlayerCameraState(int oldState, int newState)
-
+Event OnUpdate()
 endEvent
 
-State Dialogue
+Event OnKeyDown(Int iKeyCode)
+endEvent
+
+Event OnPlayerCameraState(int oldState, int newState)
+endevent
+
+state dialogue
+Event OnUpdate()
+	float fCDist
+	if fTR == 1.0
+		if !bSit
+			fCDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
+		else
+			fCDist = fDist 
+		endif
+	; 	debug.Notification("fDist:"+fDist + "  fCDist:"+fCDist)
+		if !(fDist - fCDist <= 10.0 && fDist - fCDist >= -10.0)
+			fDist = fCDist
+			RegisterForSingleUpdate(1.0)
+		endif
+	endif
+endEvent
+
 Event OnKeyDown(Int iKeyCode)
 	if iKeyCode == iPovKeyCode
 		if !GetCameraState()
@@ -183,7 +207,6 @@ Event OnKeyDown(Int iKeyCode)
 		endif
 	endif
 EndEvent
-
 
 Event OnPlayerCameraState(int oldState, int newState)
 	if !bFov
@@ -200,8 +223,9 @@ Event OnPlayerCameraState(int oldState, int newState)
 			fFov = gvFovDist[index].GetValue()
 			SetCurrentFOV(fFov)
 		endif
-		aTarget = GetPlayerDialogueTarget()
+; 		aTarget = GetPlayerDialogueTarget()
 		PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
+		
 	elseif newState == 9 && oldState == 0
 		if fFovIni != GetCurrentFOV()
 			SetCurrentFOV(fFovIni)
@@ -209,7 +233,7 @@ Event OnPlayerCameraState(int oldState, int newState)
 		endif
 	endif
 endEvent
-endState
+endstate
 
 Function ForceFP(float fSpeed)
 	if fSpeed == 3.0
@@ -244,17 +268,17 @@ Function ChangePV(string mode, float wait)
 endFunction
 
 int Function GetArrayNum(float fDistance)
-	if fDistance <= 50
+	if fDistance < 50
 		return 0
-	elseif fDistance >= 51 && fDistance <= 75
+	elseif fDistance > 50 && fDistance <= 75
 		return 1
-	elseif fDistance >= 76 && fDistance <= 100
+	elseif fDistance > 75 && fDistance <= 100
 		return 2
-	elseif fDistance >= 101 && fDistance <= 125
+	elseif fDistance > 100 && fDistance <= 125
 		return 3
-	elseif fDistance >= 126 && fDistance <= 150
+	elseif fDistance > 125 && fDistance <= 150
 		return 4
-	elseif fDistance >= 151
+	elseif fDistance > 150
 		return 5
 	endif
 endFunction

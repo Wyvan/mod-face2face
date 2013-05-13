@@ -3,6 +3,7 @@ Scriptname aaatowCV_Main extends ReferenceAlias
 Import Game
 Import towPlugin
 Import Utility
+Import HimikaTest
 
 GlobalVariable Property gvAPV  Auto
 GlobalVariable Property gvSP Auto	;fMouseWheelZoomSpeed:Camera
@@ -107,7 +108,7 @@ Event OnMenuOpen(string menuName)
 					int index = GetArrayNum(fDist)
 					if index != -1
 						fFov = gvFovDist[index].GetValue()
-						SetCurrentFOV(fFov)
+						SetFOVSmooth(fFov,1000)
 					endif
 
 					if !bSit
@@ -147,7 +148,7 @@ Event OnMenuClose(string menuName)
 
 	if fFov != 0.0
 		if fFovIni != GetCurrentFOV()
-			SetCurrentFOV(fFovIni)
+			SetFOVSmooth(fFovIni,1000)
 			fFov = 0.0
 		endif
 	endif
@@ -221,14 +222,14 @@ Event OnPlayerCameraState(int oldState, int newState)
 		int index = GetArrayNum(fDist)
 		if index != -1
 			fFov = gvFovDist[index].GetValue()
-			SetCurrentFOV(fFov)
+			SetFOVSmooth(fFov,1000)
 		endif
 ; 		aTarget = GetPlayerDialogueTarget()
 		PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
 		
 	elseif newState == 9 && oldState == 0
 		if fFovIni != GetCurrentFOV()
-			SetCurrentFOV(fFovIni)
+			SetFOVSmooth(fFovIni,1000)
 			fFov = 0.0
 		endif
 	endif

@@ -35,24 +35,6 @@ bool property bFov Hidden
 	EndFunction
 EndProperty
 
-int property iFov Hidden
-	int Function Get()
-		Return gvFoV.GetValue() as int
-	EndFunction
-EndProperty
-
-int Property iPovKeyCode Hidden
-	int Function Get()
-		return Input.GetMappedKey("Toggle POV")
-	EndFunction
-EndProperty
-
-float property fZoomSpeed Hidden
-	float Function Get()
-		Return gvSP.GetValue() as float
-	EndFunction
-EndProperty
-
 Actor aPlayer
 Actor aTarget
 
@@ -63,7 +45,9 @@ float fAngleF = 120.0
 bool bPVZoom
 ;前方角度。ここの処理は手抜き
 
+float fZoomSpeed
 float fZoomSpeedIni
+int iPovKeyCode
 
 float fDist
 float fFov
@@ -76,54 +60,57 @@ Event OnInit()
 	aPlayer = GetPlayer()
 EndEvent
 
-
 Event OnMenuOpen(string menuName)
 	if (menuName != "Dialogue Menu")
 		return
 	endif
-	fZoomSpeedIni = GetINIFloat("fMouseWheelZoomSpeed:Camera")
+	GetSetting()
 
 	gotostate("dialogue")
 	RegisterForKey(iPovKeyCode)
 	
-	fFovIni = GetFov()
-	bFP = !GetCameraState()
-	bSit = (aPlayer.GetSitState() == 3) as bool
-	
 	aTarget = GetPlayerDialogueTarget()
-	if aTarget != None
-		SetINIFloat("fMouseWheelZoomSpeed:Camera", fZoomSpeed)
-		bPVZoom = IsPVZoom(aTarget, fAngleF)
-		if bAPV
-			fDist = aPlayer.GetDistance(aTarget)
-			if fAPV == 1.0	;FPV
-				if bFP
-					fFov = GetFovDistance()
-					if (fFov as bool)
-						SetFov(fFov)
-					endif
-				endif	
+	if aTarget == None
+		gotostate("")
+		return
+	endif
+	
+	bPVZoom = IsPVZoom(aTarget, fAngleF)
+	SetZoomSpeed(fZoomSpeed)
 
-				if !bSit
-					fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
-				elseif bFP
-					fDist = aPlayer.GetDistance(aTarget)
-				endif
-
-				if !bFP
-					ChangePV("FP", bPVZoom)
-				endif
-			elseif fAPV == 2.0	;TPV
-				if bFP
-					fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
-					waitmenumode(0.5)
-					ChangePV("TP", bPVZoom)
-				endif
-			endif
-			if fTR >= 1.0
-				RegisterforSingleupdate(1.0)
+	if !bAPV
+		gotostate("")
+		return
+	endif
+	
+	fDist = aPlayer.GetDistance(aTarget)
+	if fAPV == 1.0	;FPV
+		if bFP
+			fFov = GetFovDistance()
+			if (fFov as bool)
+				SetFov(fFov)
 			endif
 		endif
+
+		if !bSit
+			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
+		elseif bFP
+			fDist = aPlayer.GetDistance(aTarget)
+		endif
+
+		if !bFP
+			ChangePV("FP", bPVZoom)
+		endif
+	elseif fAPV == 2.0	;TPV
+		if bFP
+			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
+			waitmenumode(0.5)
+			ChangePV("TP", bPVZoom)
+		endif
+	endif
+
+	if fTR >= 1.0
+		RegisterforSingleupdate(1.0)
 	endif
 EndEvent
 
@@ -154,7 +141,8 @@ Event OnMenuClose(string menuName)
 			endif
 		endif
 	endif
-	SetINIFloat("fMouseWheelZoomSpeed:Camera", fZoomSpeedIni)
+
+	SetZoomSpeed(fZoomSpeedIni)
 EndEvent
 
 Event OnUpdate()
@@ -188,8 +176,10 @@ endEvent
 Event OnKeyDown(Int iKeyCode)
 	if iKeyCode == iPovKeyCode
 		if !GetCameraState()
+			SetFOVSmooth(fFovIni,-1)
 			ForceTP(fZoomSpeed)
 		else
+			SetFOVSmooth(fFov,-1)
 			ForceFP(fZoomSpeed)
 			waitmenumode(0.5)
 			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
@@ -210,7 +200,9 @@ Event OnPlayerCameraState(int oldState, int newState)
 		int index = GetArrayNum(fDist)
 		if index != -1
 			fFov = gvFovDist[index].GetValue()
-			SetFOV(fFov)
+			if fFov != GetCurrentFOV()
+				SetFOV(fFov)
+			endif
 		endif
 ; 		aTarget = GetPlayerDialogueTarget()
 		PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
@@ -223,6 +215,21 @@ Event OnPlayerCameraState(int oldState, int newState)
 	endif
 endEvent
 endstate
+
+Function GetSetting()
+	fZoomSpeed = gvSP.GetValue() as float
+	fZoomSpeedIni = GetINIFloat("fMouseWheelZoomSpeed:Camera")
+	iPovKeyCode = Input.GetMappedKey("Toggle POV")
+	fFovIni = GetFov()
+	bFP = !GetCameraState()
+	bSit = (aPlayer.GetSitState() == 3) as bool
+endFunction
+
+function SetZoomSpeed(float speed)
+	if fZoomSpeed != fZoomSpeedIni
+		SetINIFloat("fMouseWheelZoomSpeed:Camera", speed)
+	endif
+endFunction
 
 Function ForceFP(float fSpeed)
 	if fSpeed == 3.0
@@ -287,17 +294,19 @@ float function GetFov()
 	if result == 0.0
 		result = GetDefaultFOV()
 		if result == 0.0
-			result = 65.0
+			result = 65.0	;vanila setting
 		endif
 	endif
 	return result
 endfunction
 
 Function SetFov(float fovpts)
+	int iFov = gvFoV.GetValue() as int
 	if iFov == 1
 		SetFOVSmooth(fovpts,1000)
 	elseif iFov == 2
-		SetCurrentFOV(fovpts)
+; 		SetCurrentFOV(fovpts)
+		SetFOVSmooth(fovpts,-1)
 	endif
 endFunction
 

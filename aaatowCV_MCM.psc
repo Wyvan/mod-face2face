@@ -63,6 +63,8 @@ Event OnConfigInit()
 	fFOVDist[4] = gvFOVDist[4].GetValue()
 	fFOVDist[5] = gvFOVDist[5].GetValue()
 
+	fZoomSpeed = gvCVSP.GetValue()
+
 	fFOVDistDef = new float[6]
 	fFOVDistDef[0] = 45
 	fFOVDistDef[1] = 40
@@ -88,11 +90,7 @@ Event OnConfigInit()
 endEvent
 
 Event OnPageReset(String a_Page)
-	fZoomSpeed = Utility.GetINIFloat("fMouseWheelZoomSpeed:Camera")
-	if fZoomSpeed > 3.0
-		fZoomSpeed = 3.0
-	endif
-	
+
 ; 	======================== LEFT ========================
 
 	SetCursorFillMode(TOP_TO_BOTTOM)
@@ -181,6 +179,9 @@ endEvent
 
 Event OnConfigClose()
 	gvAPV.Setvalue(iAction as float)
+	if fZoomSpeed == 0.0
+		fZoomSpeed = 0.8
+	endif
 	gvCVSP.Setvalue(fZoomSpeed)
 	gvFOV.Setvalue(iChangeFOV as float)
 	gvTR.Setvalue(iTracking as float)

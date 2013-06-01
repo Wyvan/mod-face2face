@@ -3,7 +3,6 @@ Scriptname aaatowCV_Main extends ReferenceAlias
 Import Game
 Import towPlugin
 Import Utility
-Import HimikaTest
 
 GlobalVariable Property gvAPV  Auto
 GlobalVariable Property gvSP Auto	;fMouseWheelZoomSpeed:Camera
@@ -248,14 +247,17 @@ Function ForceTP(float fSpeed)
 endFunction
 
 Function ChangePV(string mode, bool zoom)
+	int iFov = gvFoV.GetValue() as int
 	if mode == "TP"
-		if !zoom || bFov
+; 		debug.Notification("zoom:"+zoom + "  iFov:"+iFov)
+		if !zoom || iFov == 1
 			ForceTP(3.0)
 		else
 			ForceTP(fZoomSpeed)
 		endif
 	else
-		if !zoom || bFov
+; 		debug.Notification("zoom:"+zoom + "  iFov:"+iFov)
+		if !zoom || iFov == 1
 			ForceFP(3.0)
 		else
 			ForceFP(fZoomSpeed)

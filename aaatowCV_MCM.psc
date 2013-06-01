@@ -171,7 +171,7 @@ event OnOptionHighlight(int option)
 	If option == iActionID
 		SetInfoText("If you set this item, It will try to switch to setting when start a conversation with NPC.")
 	elseif option == iChangeFOVID
-		SetInfoText("This feature needs to select 'First Person' of Action.")
+		SetInfoText("This feature needs to select 'First Person' of Action.\nDirect is same as v2.4")
 	elseif option == iZoomSpeedID
 		SetInfoText("3.0 = Instant.")
 	endif

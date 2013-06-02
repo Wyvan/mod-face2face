@@ -10,3 +10,4 @@ float Function GetDefaultFOV() global native
 float Function GetCurrentFOV() global native
 Function SetCurrentFOV(float fFOV) global native
 int Function GetDeliveryType(MagicEffect akMgef) global native
+Function SetFOVSmooth(float fov, float delay) global native

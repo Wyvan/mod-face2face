@@ -1,14 +1,25 @@
 Scriptname aaatowCV_Main extends ReferenceAlias  
 
 Import Game
-Import towPlugin
 Import Utility
+
+Function ForceFirstPersonSmooth() global native
+Function ForceThirdPersonSmooth() global native
+Function ForceThirdPersonEX() global native
+Function SetCameraAngle(float afRotZ, float afRotX, float afWait=1000.0) global native
+float Function PlayerLookAtNode(ObjectReference akRef, String Nodename, float afWait=1000.0) global native
+Actor Function GetPlayerDialogueTarget() global native
+float Function GetDefaultFOV() global native
+float Function GetCurrentFOV() global native
+Function SetFOVSmooth(float fov, float delay) global native
+
 
 GlobalVariable Property gvAPV  Auto
 GlobalVariable Property gvSP Auto	;fMouseWheelZoomSpeed:Camera
 GlobalVariable Property gvFoV Auto
 GlobalVariable Property gvTR Auto
 GlobalVariable[] Property gvFovDist Auto
+GlobalVariable Property gvMouseSensitivity Auto
 
 float property fAPV Hidden
 	float Function Get()
@@ -34,6 +45,13 @@ bool property bFov Hidden
 	EndFunction
 EndProperty
 
+
+bool property bMouseSensitivity Hidden
+	bool Function Get()
+		Return gvMouseSensitivity.GetValue() as bool
+	EndFunction
+EndProperty
+
 Actor aPlayer
 Actor aTarget
 
@@ -52,6 +70,10 @@ float fDist
 float fFov
 float fFovIni
 
+float MouseXScale
+float MouseYScale
+float MouseXScaleIni
+float MouseYScaleIni
 
 Event OnInit()
 	RegisterForCameraState()
@@ -88,6 +110,7 @@ Event OnMenuOpen(string menuName)
 			fFov = GetFovDistance()
 			if (fFov as bool)
 				SetFov(fFov)
+				SetMouseSensitivity(fFov)
 			endif
 		endif
 
@@ -109,7 +132,7 @@ Event OnMenuOpen(string menuName)
 	endif
 
 	if fTR >= 1.0
-		RegisterforSingleupdate(1.0)
+		RegisterforSingleupdate(0.2)
 	endif
 EndEvent
 
@@ -125,6 +148,7 @@ Event OnMenuClose(string menuName)
 	if (fFov != 0.0)
 		if (fFovIni != GetCurrentFOV())
 			SetFov(fFovIni)
+			SetMouseSensitivity(0.0)
 		endif
 	endif
 	fFov = 0.0
@@ -153,6 +177,8 @@ endEvent
 Event OnPlayerCameraState(int oldState, int newState)
 endevent
 
+int TROnce
+
 state dialogue
 Event OnUpdate()
 	float fCDist
@@ -167,7 +193,15 @@ Event OnUpdate()
 
 		if !(fDist - fCDist <= 10.0 && fDist - fCDist >= -10.0)
 			fDist = fCDist
-			RegisterForSingleUpdate(1.0)
+			TROnce = 0
+		else
+			TROnce += 1
+		endif
+
+		if TROnce < 5
+			RegisterForSingleUpdate(0.2)
+		elseif TROnce >= 5
+			TROnce = 0
 		endif
 	endif
 endEvent
@@ -177,9 +211,11 @@ Event OnKeyDown(Int iKeyCode)
 		if !GetCameraState()
 			SetFOVSmooth(fFovIni,-1)
 			ForceTP(fZoomSpeed)
+			SetMouseSensitivity(0.0)
 		else
 			SetFOVSmooth(fFov,-1)
 			ForceFP(fZoomSpeed)
+			SetMouseSensitivity(fFov)
 			waitmenumode(0.5)
 			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
 		endif
@@ -201,6 +237,7 @@ Event OnPlayerCameraState(int oldState, int newState)
 			fFov = gvFovDist[index].GetValue()
 			if fFov != GetCurrentFOV()
 				SetFOV(fFov)
+				SetMouseSensitivity(fFov)
 			endif
 		endif
 ; 		aTarget = GetPlayerDialogueTarget()
@@ -209,6 +246,7 @@ Event OnPlayerCameraState(int oldState, int newState)
 	elseif newState == 9 && oldState == 0
 		if fFovIni != GetCurrentFOV()
 			SetFOV(fFovIni)
+			SetMouseSensitivity(0.0)
 			fFov = 0.0
 		endif
 	endif
@@ -220,6 +258,9 @@ Function GetSetting()
 	fZoomSpeedIni = GetINIFloat("fMouseWheelZoomSpeed:Camera")
 	iPovKeyCode = Input.GetMappedKey("Toggle POV")
 	fFovIni = GetFov()
+	MouseXScaleIni = GetINIFloat("fMouseHeadingXScale:Controls")
+	MouseYScaleIni = GetINIFloat("fMouseHeadingYScale:Controls")
+
 	bFP = !GetCameraState()
 	bSit = (aPlayer.GetSitState() == 3) as bool
 endFunction
@@ -228,6 +269,7 @@ function SetZoomSpeed(float speed)
 	if fZoomSpeed != fZoomSpeedIni
 		SetINIFloat("fMouseWheelZoomSpeed:Camera", speed)
 	endif
+
 endFunction
 
 Function ForceFP(float fSpeed)
@@ -292,9 +334,9 @@ int Function GetArrayNum(float fDistance)
 endFunction
 
 float function GetFov()
-	float result = GetCurrentFOV()
+	float result = GetDefaultFOV()
 	if result == 0.0
-		result = GetDefaultFOV()
+		result = GetCurrentFOV()
 		if result == 0.0
 			result = 65.0	;vanila setting
 		endif
@@ -305,11 +347,31 @@ endfunction
 Function SetFov(float fovpts)
 	int iFov = gvFoV.GetValue() as int
 	if iFov == 1
-		SetFOVSmooth(fovpts,1000)
+		float fZoomFOVSpeed = fZoomSpeed
+		if fZoomFOVSpeed > 1.5
+			fZoomFOVSpeed = 1.5
+		endif
+		SetFOVSmooth(fovpts,((2.0 - fZoomFOVSpeed) * 1000))
 	elseif iFov == 2
-; 		SetCurrentFOV(fovpts)
 		SetFOVSmooth(fovpts,-1)
 	endif
+endFunction
+
+Function SetMouseSensitivity(float fovpts)
+	if !bMouseSensitivity
+		return
+	endif
+	
+	float FOVmulti
+	if fovpts != 0.0
+		FOVmulti = fovpts / fFOVIni
+	else
+		FOVmulti = 1
+	endif
+	MouseXScale = MouseXScaleIni * FOVmulti
+	MouseYScale = MouseYScaleIni * FOVmulti
+	SetINIFloat("fMouseHeadingXScale:Controls", MouseXScale)
+	SetINIFloat("fMouseHeadingYScale:Controls", MouseYScale)
 endFunction
 
 bool Function IsPVZoom(Actor Target, float fSet)

@@ -5,7 +5,7 @@ Quest Property MainQuest  Auto
 Event OnPlayerLoadGame()
 	if MainQuest.IsRunning()
 		MainQuest.Stop()
-		Utility.wait(1)
+		Utility.wait(1.0)
 		MainQuest.Start()
 	endif
 endEvent

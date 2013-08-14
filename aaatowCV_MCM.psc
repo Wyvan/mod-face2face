@@ -141,7 +141,7 @@ event OnOptionSliderOpen(int option)
 	if option == iZoomSpeedID
 		SetSliderDialogStartValue(fZoomSpeed)
 		SetSliderDialogDefaultValue(0.8)
-		SetSliderDialogRange(0.6, 3.0)
+		SetSliderDialogRange(0.1, 3.0)
 		SetSliderDialogInterval(0.1)
 	endif
 
@@ -171,7 +171,7 @@ event OnOptionHighlight(int option)
 	If option == iActionID
 		SetInfoText("If you set this item, It will try to switch to setting when start a conversation with NPC.")
 	elseif option == iChangeFOVID
-		SetInfoText("This feature needs to select 'First Person' of Action.\nDirect is same as v2.4")
+		SetInfoText("This feature needs to select 'First Person' of Action.")
 	elseif option == iZoomSpeedID
 		SetInfoText("3.0 = Instant.")
 	endif

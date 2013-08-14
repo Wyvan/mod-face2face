@@ -334,10 +334,13 @@ int Function GetArrayNum(float fDistance)
 endFunction
 
 float function GetFov()
-	float result = GetDefaultFOV()
-	if result == 0.0
-		result = GetCurrentFOV()
+	float result = GetCurrentFOV()	; fDefaultWorldFOV
+	debug.Notification("GetCurrentFOV():"+result)
+ 	if result == 0.0
+		result = GetDefaultFOV()	; fDefault1stPersonFOV
+		debug.Notification("GetDefaultFOV():"+result)
 		if result == 0.0
+			debug.Notification("else:"+result)
 			result = 65.0	;vanila setting
 		endif
 	endif

@@ -335,12 +335,12 @@ endFunction
 
 float function GetFov()
 	float result = GetCurrentFOV()	; fDefaultWorldFOV
-	debug.Notification("GetCurrentFOV():"+result)
+; 	debug.Notification("GetCurrentFOV():"+result)
  	if result == 0.0
 		result = GetDefaultFOV()	; fDefault1stPersonFOV
-		debug.Notification("GetDefaultFOV():"+result)
+; 		debug.Notification("GetDefaultFOV():"+result)
 		if result == 0.0
-			debug.Notification("else:"+result)
+; 			debug.Notification("else:"+result)
 			result = 65.0	;vanila setting
 		endif
 	endif

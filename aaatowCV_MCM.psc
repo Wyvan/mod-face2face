@@ -33,23 +33,23 @@ Event OnVersionUpdate(int a_version)
 
 	if (a_version >= 2 && CurrentVersion < 2)
 		strPV = new string[3]
-		strPV[0] = "Do Nothing"
-		strPV[1] = "First Person"
-		strPV[2] = "Third Person"
+		strPV[0] = "$DoNothing"
+		strPV[1] = "$FirstPerson"
+		strPV[2] = "$ThirdPerson"
 	endif
 
 	if (a_version >= 3 && CurrentVersion < 3)
 		strTR = new string[2]
-		strTR[0] = "Do Nothing"
-		strTR[1] = "Tracking"
-; 		strTR[2] = "Approach(wip)"
+		strTR[0] = "$DoNothing"
+		strTR[1] = "$Tracking"
+; 		strTR[2] = "$Approach"
 	endif
 
 	if (a_version >= 4 && CurrentVersion < 4)
 		strFOV = new string[3]
-		strFOV[0] = "Do Nothing"
-		strFOV[1] = "Smooth"
-		strFOV[2] = "Direct"
+		strFOV[0] = "$DoNothing"
+		strFOV[1] = "$Smooth"
+		strFOV[2] = "$Direct"
 	endif
 endEvent
 
@@ -74,19 +74,19 @@ Event OnConfigInit()
 	fFOVDistDef[5] = 20
 
 	strPV = new string[3]
-	strPV[0] = "Do Nothing"
-	strPV[1] = "First Person"
-	strPV[2] = "Third Person"
+	strPV[0] = "$DoNothing"
+	strPV[1] = "$FirstPerson"
+	strPV[2] = "$ThirdPerson"
 
 	strTR = new string[2]
-	strTR[0] = "Do Nothing"
-	strTR[1] = "Tracking"
-; 	strTR[2] = "Approach(wip)"
+	strTR[0] = "$DoNothing"
+	strTR[1] = "$Tracking"
+; 	strTR[2] = "$Approach"
 
 	strFOV = new string[3]
-	strFOV[0] = "Do Nothing"
-	strFOV[1] = "Smooth"
-	strFOV[2] = "Direct"
+	strFOV[0] = "$DoNothing"
+	strFOV[1] = "$Smooth"
+	strFOV[2] = "$Direct"
 endEvent
 
 Event OnPageReset(String a_Page)
@@ -94,30 +94,30 @@ Event OnPageReset(String a_Page)
 ; 	======================== LEFT ========================
 
 	SetCursorFillMode(TOP_TO_BOTTOM)
-	AddHeaderOption("Face to face conversation")
-	iActionID = AddTextOption("Action", strPV[iAction])
-	iZoomSpeedID = AddSliderOption("Zoom Speed", fZoomSpeed, "{1}")
-	iTrackingID = AddTextOption("Tracking", strTR[iTracking])
-	iChangeFOVID = AddTextOption("Change FOV by distance", strFOV[iChangeFOV])
+	AddHeaderOption("$F2F")
+	iActionID = AddTextOption("$Action", strPV[iAction])
+	iZoomSpeedID = AddSliderOption("$ZoomSpeed", fZoomSpeed, "{1}")
+	iTrackingID = AddTextOption("$NPCTracking", strTR[iTracking])
+	iChangeFOVID = AddTextOption("$ChangeFOV", strFOV[iChangeFOV])
 
 ; 	======================== RIGHT ========================
 	SetCursorPosition(1)
 	if iChangeFOV as bool
-		AddHeaderOption("Change FOV setting by distance.", OPTION_FLAG_NONE)
-		iFOVDistID[0] = AddSliderOption("50 Unit or less", fFOVDist[0], "FOV {0}", OPTION_FLAG_NONE)
-		iFOVDistID[1] = AddSliderOption("Between 50 and 75", fFOVDist[1], "FOV {0}", OPTION_FLAG_NONE)
-		iFOVDistID[2] = AddSliderOption("Between 75 and 100", fFOVDist[2], "FOV {0}", OPTION_FLAG_NONE)
-		iFOVDistID[3] = AddSliderOption("Between 100 and 125", fFOVDist[3], "FOV {0}", OPTION_FLAG_NONE)
-		iFOVDistID[4] = AddSliderOption("Between 125 and 150", fFOVDist[4], "FOV {0}", OPTION_FLAG_NONE)
-		iFOVDistID[5] = AddSliderOption("Over 150 Unit", fFOVDist[5], "FOV {0}", OPTION_FLAG_NONE)
+		AddHeaderOption("$ChangeFOVsetting", OPTION_FLAG_NONE)
+		iFOVDistID[0] = AddSliderOption("$Distance0", fFOVDist[0], "$FOV", OPTION_FLAG_NONE)
+		iFOVDistID[1] = AddSliderOption("$Distance1", fFOVDist[1], "$FOV", OPTION_FLAG_NONE)
+		iFOVDistID[2] = AddSliderOption("$Distance2", fFOVDist[2], "$FOV", OPTION_FLAG_NONE)
+		iFOVDistID[3] = AddSliderOption("$Distance3", fFOVDist[3], "$FOV", OPTION_FLAG_NONE)
+		iFOVDistID[4] = AddSliderOption("$Distance4", fFOVDist[4], "$FOV", OPTION_FLAG_NONE)
+		iFOVDistID[5] = AddSliderOption("$Distance5", fFOVDist[5], "$FOV", OPTION_FLAG_NONE)
 	else
-		AddHeaderOption("Change FOV setting by distance.", OPTION_FLAG_DISABLED)
-		iFOVDistID[0] = AddSliderOption("50 Unit or less", fFOVDist[0], "FOV {0}", OPTION_FLAG_DISABLED)
-		iFOVDistID[1] = AddSliderOption("Between 50 and 75", fFOVDist[1], "FOV {0}", OPTION_FLAG_DISABLED)
-		iFOVDistID[2] = AddSliderOption("Between 75 and 100", fFOVDist[2], "FOV {0}", OPTION_FLAG_DISABLED)
-		iFOVDistID[3] = AddSliderOption("Between 100 and 125", fFOVDist[3], "FOV {0}", OPTION_FLAG_DISABLED)
-		iFOVDistID[4] = AddSliderOption("Between 125 and 150", fFOVDist[4], "FOV {0}", OPTION_FLAG_DISABLED)
-		iFOVDistID[5] = AddSliderOption("Over 150 Unit", fFOVDist[5], "FOV {0}", OPTION_FLAG_DISABLED)
+		AddHeaderOption("$ChangeFOVsetting", OPTION_FLAG_DISABLED)
+		iFOVDistID[0] = AddSliderOption("$Distance0", fFOVDist[0], "$FOV", OPTION_FLAG_DISABLED)
+		iFOVDistID[1] = AddSliderOption("$Distance1", fFOVDist[1], "$FOV", OPTION_FLAG_DISABLED)
+		iFOVDistID[2] = AddSliderOption("$Distance2", fFOVDist[2], "$FOV", OPTION_FLAG_DISABLED)
+		iFOVDistID[3] = AddSliderOption("$Distance3", fFOVDist[3], "$FOV", OPTION_FLAG_DISABLED)
+		iFOVDistID[4] = AddSliderOption("$Distance4", fFOVDist[4], "$FOV", OPTION_FLAG_DISABLED)
+		iFOVDistID[5] = AddSliderOption("$Distance5", fFOVDist[5], "$FOV", OPTION_FLAG_DISABLED)
 	endif
 endEvent
 
@@ -163,17 +163,19 @@ event OnOptionSliderAccept(int option, float value)
 	int iCount = iFOVDistID.find(option)
 	if iCount != -1
 		fFOVDist[iCount] = value
-		SetSliderOptionValue(iFOVDistID[iCount], fFOVDist[iCount], "FOV {0}")
+		SetSliderOptionValue(iFOVDistID[iCount], fFOVDist[iCount], "$FOV")
 	endif
 endEvent
 
 event OnOptionHighlight(int option)
 	If option == iActionID
-		SetInfoText("If you set this item, It will try to switch to setting when start a conversation with NPC.")
-	elseif option == iChangeFOVID
-		SetInfoText("This feature needs to select 'First Person' of Action.")
+		SetInfoText("$ActionIDtext")
 	elseif option == iZoomSpeedID
-		SetInfoText("3.0 = Instant.")
+		SetInfoText("$ZoomSpeedIDtext")
+	elseif option == iTrackingID
+		SetInfoText("$TrackingIDtext")
+	elseif option == iChangeFOVID
+		SetInfoText("$ChangeFOVIDtext")
 	endif
 endEvent
 

@@ -99,10 +99,10 @@ Event OnMenuOpen(string menuName)
 	bPVZoom = IsPVZoom(aTarget, fAngleF)
 	SetZoomSpeed(fZoomSpeed)
 
-	if !bAPV
-		gotostate("")
-		return
-	endif
+; 	if !bAPV
+; 		gotostate("")
+; 		return
+; 	endif
 	
 	fDist = aPlayer.GetDistance(aTarget)
 	if fAPV == 1.0	;FPV
@@ -209,12 +209,20 @@ endEvent
 Event OnKeyDown(Int iKeyCode)
 	if iKeyCode == iPovKeyCode
 		if !GetCameraState()
-			SetFOVSmooth(fFovIni,-1)
-			ForceTP(fZoomSpeed)
+			if bFov
+				SetFOVSmooth(fFovIni,-1)
+				ChangePV("TP", bPVZoom)
+			else
+				ForceTP(fZoomSpeed)
+			endif
 			SetMouseSensitivity(0.0)
 		else
-			SetFOVSmooth(fFov,-1)
-			ForceFP(fZoomSpeed)
+			if bFov
+				SetFOVSmooth(fFov,-1)
+				ChangePV("FP", bPVZoom)
+			else
+				ForceFP(fZoomSpeed)
+			endif
 			SetMouseSensitivity(fFov)
 			waitmenumode(0.5)
 			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)

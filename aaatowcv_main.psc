@@ -81,6 +81,18 @@ Event OnInit()
 	aPlayer = GetPlayer()
 EndEvent
 
+Function GetSetting()
+	fZoomSpeed = gvSP.GetValue() as float
+	fZoomSpeedIni = GetINIFloat("fMouseWheelZoomSpeed:Camera")
+	iPovKeyCode = Input.GetMappedKey("Toggle POV")
+	fFovIni = Utility.GetINIFloat("fDefaultWorldFOV:Display")
+	MouseXScaleIni = GetINIFloat("fMouseHeadingXScale:Controls")
+	MouseYScaleIni = GetINIFloat("fMouseHeadingYScale:Controls")
+
+	bFP = !GetCameraState()
+	bSit = (aPlayer.GetSitState() == 3) as bool
+endFunction
+
 Event OnMenuOpen(string menuName)
 	if (menuName != "Dialogue Menu")
 		return
@@ -99,16 +111,11 @@ Event OnMenuOpen(string menuName)
 	bPVZoom = IsPVZoom(aTarget, fAngleF)
 	SetZoomSpeed(fZoomSpeed)
 
-; 	if !bAPV
-; 		gotostate("")
-; 		return
-; 	endif
-	
 	fDist = aPlayer.GetDistance(aTarget)
 	if fAPV == 1.0	;FPV
 		if bFP
 			fFov = GetFovDistance()
-			if (fFov as bool)
+			if fFov as bool
 				SetFov(fFov)
 				SetMouseSensitivity(fFov)
 			endif
@@ -145,13 +152,10 @@ Event OnMenuClose(string menuName)
 	UnregisterForKey(iPovKeyCode)
 	aTarget = None
 
-	if (fFov != 0.0)
-		if (fFovIni != GetCurrentFOV())
-			SetFov(fFovIni)
-			SetMouseSensitivity(0.0)
-		endif
+	if fFovIni != GetCurrentFOV()
+		SetFov(fFovIni)
+		SetMouseSensitivity(0.0)
 	endif
-	fFov = 0.0
 	
 	if bAPV
 		if !Game.GetCameraState()	; is fp?
@@ -261,17 +265,6 @@ Event OnPlayerCameraState(int oldState, int newState)
 endEvent
 endstate
 
-Function GetSetting()
-	fZoomSpeed = gvSP.GetValue() as float
-	fZoomSpeedIni = GetINIFloat("fMouseWheelZoomSpeed:Camera")
-	iPovKeyCode = Input.GetMappedKey("Toggle POV")
-	fFovIni = GetFov()
-	MouseXScaleIni = GetINIFloat("fMouseHeadingXScale:Controls")
-	MouseYScaleIni = GetINIFloat("fMouseHeadingYScale:Controls")
-
-	bFP = !GetCameraState()
-	bSit = (aPlayer.GetSitState() == 3) as bool
-endFunction
 
 function SetZoomSpeed(float speed)
 	if fZoomSpeed != fZoomSpeedIni
@@ -341,19 +334,19 @@ int Function GetArrayNum(float fDistance)
 	endif
 endFunction
 
-float function GetFov()
-	float result = GetCurrentFOV()	; fDefaultWorldFOV
-; 	debug.Notification("GetCurrentFOV():"+result)
- 	if result == 0.0
-		result = GetDefaultFOV()	; fDefault1stPersonFOV
-; 		debug.Notification("GetDefaultFOV():"+result)
-		if result == 0.0
-; 			debug.Notification("else:"+result)
-			result = 65.0	;vanila setting
-		endif
-	endif
-	return result
-endfunction
+; float function GetFov()
+; 	float result = GetCurrentFOV()	; fDefaultWorldFOV
+; ; 	debug.Notification("GetCurrentFOV():"+result)
+;  	if result == 0.0
+; 		result = GetDefaultFOV()	; fDefault1stPersonFOV
+; ; 		debug.Notification("GetDefaultFOV():"+result)
+; 		if result == 0.0
+; ; 			debug.Notification("else:"+result)
+; 			result = 65.0	;vanila setting
+; 		endif
+; 	endif
+; 	return result
+; endfunction
 
 Function SetFov(float fovpts)
 	int iFov = gvFoV.GetValue() as int
@@ -406,8 +399,7 @@ bool Function IsPVZoom(Actor Target, float fSet)
 		iResult[1] = (fSet / 2) as int
 	endif
 
-	if !(aPlayer.getHeadingAngle(Target) < iResult[1] && \
-								aPlayer.getHeadingAngle(Target) > iResult[0])
+	if !(aPlayer.getHeadingAngle(Target) < iResult[1] && aPlayer.getHeadingAngle(Target) > iResult[0])
 		return false
 	else
 		return true

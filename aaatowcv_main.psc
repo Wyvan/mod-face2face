@@ -1,394 +1,77 @@
 Scriptname aaatowCV_Main extends ReferenceAlias  
 
-Import Game
-Import Utility
+aaatowCV Property CV Auto
 
-Function ForceFirstPersonSmooth() global native
-Function ForceThirdPersonSmooth() global native
+;  ----------- FUNCTIONS ----------- 
 Function ForceThirdPersonEX() global native
-Function SetCameraAngle(float afRotZ, float afRotX, float afWait=1000.0) global native
-float Function PlayerLookAtNode(ObjectReference akRef, String Nodename, float afWait=1000.0) global native
 Actor Function GetPlayerDialogueTarget() global native
-float Function GetDefaultFOV() global native
-float Function GetCurrentFOV() global native
 Function SetFOVSmooth(float fov, float fpfov, float delay) global native
+Function SetCameraSpeed(float fSpeed) global native
+Function LookAtRef(ObjectReference akRef, float fSpeed) global native
 
-
-GlobalVariable Property gvAPV  Auto
-GlobalVariable Property gvSP Auto	;fMouseWheelZoomSpeed:Camera
-GlobalVariable Property gvFoV Auto
-GlobalVariable Property gvTR Auto
-GlobalVariable[] Property gvFovDist Auto
-GlobalVariable Property gvMouseSensitivity Auto
-
-float property fAPV Hidden
-	float Function Get()
-		Return gvAPV.GetValue()
-	EndFunction
-EndProperty
-
-bool property bAPV Hidden
-	bool Function Get()
-		Return gvAPV.GetValue() as bool
-	EndFunction
-EndProperty
-
-float property fTR Hidden
-	float Function Get()
-		Return gvTR.GetValue()
-	EndFunction
-EndProperty
-
-bool property bFov Hidden
-	bool Function Get()
-		Return gvFoV.GetValue() as bool
-	EndFunction
-EndProperty
-
-
-bool property bMouseSensitivity Hidden
-	bool Function Get()
-		Return gvMouseSensitivity.GetValue() as bool
-	EndFunction
-EndProperty
-
-Actor aPlayer
-Actor aTarget
-
-bool bFP
-bool bSit
-
-float fAngleF = 120.0
-bool bPVZoom
-;前方角度。ここの処理は手抜き
-
-float fZoomSpeed
-float fZoomSpeedIni
-int iPovKeyCode
-
-float fDist
-float fFov
-float fWorldFovIni
-float f1stPersonFovIni
-
-float MouseXScale
-float MouseYScale
-float MouseXScaleIni
-float MouseYScaleIni
-
-Event OnInit()
-	RegisterForCameraState()
-	RegisterForMenu("Dialogue Menu")
-	aPlayer = GetPlayer()
-EndEvent
-
-Function GetSetting()
-	fZoomSpeed = gvSP.GetValue() as float
-	fZoomSpeedIni = GetINIFloat("fMouseWheelZoomSpeed:Camera")
-	iPovKeyCode = Input.GetMappedKey("Toggle POV")
-	fWorldFovIni = Utility.GetINIFloat("fDefaultWorldFOV:Display")
-	f1stPersonFovIni = Utility.GetINIFloat("fDefault1stPersonFOV:Display")
-	MouseXScaleIni = GetINIFloat("fMouseHeadingXScale:Controls")
-	MouseYScaleIni = GetINIFloat("fMouseHeadingYScale:Controls")
-
-	bFP = !GetCameraState()
-	bSit = (aPlayer.GetSitState() == 3) as bool
-endFunction
-
-Event OnMenuOpen(string menuName)
-	if (menuName != "Dialogue Menu")
-		return
-	endif
-	GetSetting()
-
-	gotostate("dialogue")
-	RegisterForKey(iPovKeyCode)
-	
-	aTarget = GetPlayerDialogueTarget()
-	if aTarget == None
-		gotostate("")
-		return
-	endif
-	
-	bPVZoom = IsPVZoom(aTarget, fAngleF)
-	SetZoomSpeed(fZoomSpeed)
-
-	fDist = aPlayer.GetDistance(aTarget)
-	if fAPV == 1.0	;FPV
-		if bFP
-			fFov = GetFovDistance()
-			if fFov as bool
-				SetFov(fFov, fFov)
-				SetMouseSensitivity(fFov)
-			endif
+float Function GetDistanceByState()
+; 	Actor aPlayer = Game.GetPlayer()
+; 	if !(aPlayer.GetSitState() == 3)
+; ; 		return PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
+; 		return aPlayer.GetDistance(aTarget)
+; 	else
+		float result = Game.GetPlayer().GetDistance(aTarget)
+		if (CV.bDebugMsg)
+			Debug.Notification("GetDistance:"+ result)
 		endif
-
-		if !bSit
-			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
-		elseif bFP
-			fDist = aPlayer.GetDistance(aTarget)
-		endif
-
-		if !bFP
-			ChangePV("FP", bPVZoom)
-		endif
-	elseif fAPV == 2.0	;TPV
-		if bFP
-			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
-			waitmenumode(0.5)
-			ChangePV("TP", bPVZoom)
-		endif
-	endif
-
-	if fTR >= 1.0
-		RegisterforSingleupdate(0.2)
-	endif
-EndEvent
-
-Event OnMenuClose(string menuName)
-	if menuName != "Dialogue Menu"
-		Return
-	endif
-
-	aTarget = None
-	UnregisterForKey(iPovKeyCode)
-
-	if fWorldFovIni != GetCurrentFOV()
-		SetFov(fWorldFovIni, f1stPersonFovIni)
-		SetMouseSensitivity(0.0)
-	endif
-	
-	if bAPV
-		if !Game.GetCameraState()	; is fp?
-			if !bFP
-				ChangePV("TP", bPVZoom)
-			endif
-		else
-			if bFP
-				ChangePV("FP", bPVZoom)
-			endif
-		endif
-	endif
-	SetZoomSpeed(fZoomSpeedIni)
-	gotostate("")
-EndEvent
-
-Event OnUpdate()
-endEvent
-
-Event OnKeyDown(Int iKeyCode)
-endEvent
-
-Event OnPlayerCameraState(int oldState, int newState)
-endevent
-
-int TROnce
-
-state dialogue
-Event OnMenuOpen(string menuName)
-endEvent
-
-Event OnUpdate()
-	float fCDist
-
-	if fTR as bool
-		if !bSit
-			fCDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
-		else
-			fCDist = fDist 
-		endif
-	; 	debug.Notification("fDist:"+fDist + "  fCDist:"+fCDist)
-
-		if !(fDist - fCDist <= 10.0 && fDist - fCDist >= -10.0)
-			fDist = fCDist
-			TROnce = 0
-		else
-			TROnce += 1
-		endif
-
-		if TROnce < 5
-			RegisterForSingleUpdate(0.2)
-		elseif TROnce >= 5
-			TROnce = 0
-		endif
-	endif
-endEvent
-
-Event OnKeyDown(Int iKeyCode)
-	if iKeyCode == iPovKeyCode
-		if !GetCameraState()
-			if bFov
-				SetFOVSmooth(fWorldFovIni, f1stPersonFovIni, -1)
-				ChangePV("TP", bPVZoom)
-			else
-				ForceTP(fZoomSpeed)
-			endif
-			SetMouseSensitivity(0.0)
-		else
-			if bFov
-				SetFOVSmooth(fFov, fFov, -1)
-				ChangePV("FP", bPVZoom)
-			else
-				ForceFP(fZoomSpeed)
-			endif
-			SetMouseSensitivity(fFov)
-			waitmenumode(0.5)
-			fDist = PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
-		endif
-	endif
-EndEvent
-
-Event OnPlayerCameraState(int oldState, int newState)
-	if !bFov
-		return
-	elseif fAPV != 1.0	;TPV
-		return
-	elseif aTarget == None
-		return
-	endif
-
-	if newState == 0 && oldState == 9	;FP
-		int index = GetArrayNum(fDist)
-		if index != -1
-			fFov = gvFovDist[index].GetValue()
-			if fFov != GetCurrentFOV()
-				SetFOV(fFov, fFov)
-				SetMouseSensitivity(fFov)
-			endif
-		endif
-; 		aTarget = GetPlayerDialogueTarget()
-		PlayerLookAtNode(aTarget, "NPC Neck [Neck]",1000)
-		
-	elseif newState == 9 && oldState == 0
-		if fWorldFovIni != GetCurrentFOV()
-			SetFOV(fWorldFovIni, f1stPersonFovIni)
-			SetMouseSensitivity(0.0)
-			fFov = 0.0
-		endif
-	endif
-endEvent
-endstate
-
-
-function SetZoomSpeed(float speed)
-	if fZoomSpeed != fZoomSpeedIni
-		SetINIFloat("fMouseWheelZoomSpeed:Camera", speed)
-	endif
-
-endFunction
-
-Function ForceFP(float fSpeed)
-	if fSpeed == 3.0
-		ForceFirstPerson()
-	else
-		ForceFirstPersonSmooth()
-	endif
-endFunction
-
-Function ForceTP(float fSpeed)
-	if fSpeed == 3.0
-		ForceThirdPersonEX()
-	else
-		ForceThirdPersonSmooth()
-	endif
-endFunction
-
-Function ChangePV(string mode, bool zoom)
-	int iFov = gvFoV.GetValue() as int
-	if mode == "TP"
-; 		debug.Notification("zoom:"+zoom + "  iFov:"+iFov)
-		if !zoom || iFov == 1
-			ForceTP(3.0)
-		else
-			ForceTP(fZoomSpeed)
-		endif
-	else
-; 		debug.Notification("zoom:"+zoom + "  iFov:"+iFov)
-		if !zoom || iFov == 1
-			ForceFP(3.0)
-		else
-			ForceFP(fZoomSpeed)
-		endif
-	endif
-endFunction
-
-float Function GetFovDistance()
-	if bFov
-		int index = GetArrayNum(fDist)
-		if index != -1
-			return gvFovDist[index].GetValue()
-		endif
-	endif
-	return 0.0
-endFunction
-
-int Function GetArrayNum(float fDistance)
-	if fDistance < 50
-		return 0
-	elseif fDistance > 50 && fDistance <= 75
-		return 1
-	elseif fDistance > 75 && fDistance <= 100
-		return 2
-	elseif fDistance > 100 && fDistance <= 125
-		return 3
-	elseif fDistance > 125 && fDistance <= 150
-		return 4
-	elseif fDistance > 150
-		return 5
-	endif
-endFunction
-
-; float function GetFov()
-; 	float result = GetCurrentFOV()	; fDefaultWorldFOV
-; ; 	debug.Notification("GetCurrentFOV():"+result)
-;  	if result == 0.0
-; 		result = GetDefaultFOV()	; fDefault1stPersonFOV
-; ; 		debug.Notification("GetDefaultFOV():"+result)
-; 		if result == 0.0
-; ; 			debug.Notification("else:"+result)
-; 			result = 65.0	;vanila setting
-; 		endif
+		return result
 ; 	endif
-; 	return result
-; endfunction
+endFunction
 
-Function SetFov(float fovpts, float firstfovpts)
-	int iFov = gvFoV.GetValue() as int
-	if iFov == 1
-		float fZoomFOVSpeed = fZoomSpeed
-		if fZoomFOVSpeed > 1.5
-			fZoomFOVSpeed = 1.5
-		endif
-		SetFOVSmooth(fovpts, firstfovpts, ((2.0 - fZoomFOVSpeed) * 1000))
-	elseif iFov == 2
-		SetFOVSmooth(fovpts, firstfovpts, -1)
+float Function GetFovByDistance(float fdistance)
+	float result = 0.0
+	if fDistance < 50
+		result = CV.FoVSet[0]
+	elseif fDistance > 50 && fDistance <= 75
+		result = CV.FoVSet[1]
+	elseif fDistance > 75 && fDistance <= 100
+		result = CV.FoVSet[2]
+	elseif fDistance > 100 && fDistance <= 125
+		result = CV.FoVSet[3]
+	elseif fDistance > 125 && fDistance <= 150
+		result = CV.FoVSet[4]
+	elseif fDistance > 150
+		result = CV.FoVSet[5]
+	endif
+
+	if (CV.bDebugMsg)
+		Debug.Notification("GetFovByDistance(fDist):" + result)
+	endif
+	return result
+endFunction
+
+Function ResetFov()
+	SetFOVSmooth(fWorldFovIni, f1stPersonFovIni, (CV.fSpeed * 1000))
+endFunction
+
+Function SetMouseSensitivity(float fov1)
+	if fov1
+		float fMulti = fov1 / fWorldFovIni
+		float MouseXScale = MouseXScaleIni * fMulti
+		float MouseYScale = MouseYScaleIni * fMulti
+		Utility.SetINIFloat("fMouseHeadingXScale:Controls", MouseXScale)
+		Utility.SetINIFloat("fMouseHeadingYScale:Controls", MouseYScale)
 	endif
 endFunction
 
-Function SetMouseSensitivity(float fovpts)
-	if !bMouseSensitivity
-		return
-	endif
-	
-	float FOVmulti
-	if fovpts != 0.0
-		FOVmulti = fovpts / fWorldFovIni
-	else
-		FOVmulti = 1
-	endif
-	MouseXScale = MouseXScaleIni * FOVmulti
-	MouseYScale = MouseYScaleIni * FOVmulti
-	SetINIFloat("fMouseHeadingXScale:Controls", MouseXScale)
-	SetINIFloat("fMouseHeadingYScale:Controls", MouseYScale)
+Function ResetMouseSensitivity()
+	Utility.SetINIFloat("fMouseHeadingXScale:Controls", MouseXScaleIni)
+	Utility.SetINIFloat("fMouseHeadingYScale:Controls", MouseYScaleIni)
 endFunction
 
-bool Function IsPVZoom(Actor Target, float fSet)
-	float fShoulderX	;crosshairがプレイヤーから見てどちらにあるか。 左側<0.0 真ん中<右側
-
+bool Function IsHeadingAngle(Actor Target)
+	Actor aPlayer = Game.GetPlayer()
+	float fShoulderX	;クロスヘアがプレイヤーから見てどちらにあるか。 左側<0.0 真ん中<右側
+	float fSet = 120.0
 	if aPlayer.IsWeaponDrawn()
-		fShoulderX = GetINIFloat("fOverShoulderCombatPosX:Camera")
+		fShoulderX = Utility.GetINIFloat("fOverShoulderCombatPosX:Camera")
 	else
-		fShoulderX = GetINIFloat("fOverShoulderPosX:Camera")
+		fShoulderX = Utility.GetINIFloat("fOverShoulderPosX:Camera")
 	endif
 
 	int[] iResult = new int[2]
@@ -402,10 +85,171 @@ bool Function IsPVZoom(Actor Target, float fSet)
 		iResult[0] = (-1 * (fSet / 2)) as int
 		iResult[1] = (fSet / 2) as int
 	endif
-
 	if !(aPlayer.getHeadingAngle(Target) < iResult[1] && aPlayer.getHeadingAngle(Target) > iResult[0])
 		return false
 	else
 		return true
 	endif
 endFunction
+
+string Function GetPlayerPersonView()
+	if !Game.GetCameraState()
+		return "1st"
+	else
+		return "3rd"
+	endif
+	return None
+endFunction
+
+
+;  ----------- VARIABLE ----------- 
+Actor aTarget
+bool bZoomed
+bool bSwitched
+int KeyCode
+
+float fDist
+float fFov
+int TROnce
+
+float fWorldFovIni
+float f1stPersonFovIni
+
+float MouseXScaleIni
+float MouseYScaleIni
+
+;  ----------- EVENTS ----------- 
+Event OnInit()
+	RegisterForCameraState()
+	RegisterForMenu("Dialogue Menu")
+EndEvent
+
+Function GetSetting()
+	bZoomed = false
+	bSwitched = false
+	fWorldFovIni = Utility.GetINIFloat("fDefaultWorldFOV:Display")
+	f1stPersonFovIni = Utility.GetINIFloat("fDefault1stPersonFOV:Display")
+	MouseXScaleIni = Utility.GetINIFloat("fMouseHeadingXScale:Controls")
+	MouseYScaleIni = Utility.GetINIFloat("fMouseHeadingYScale:Controls")
+	KeyCode = Input.GetMappedKey("Toggle POV")
+endFunction
+
+Event OnMenuOpen(string menuName)
+	if (menuName == "Dialogue Menu")
+		GetSetting()
+		aTarget = GetPlayerDialogueTarget()
+		if aTarget
+			gotostate("dialogue")
+			RegisterForKey(KeyCode)
+			if IsHeadingAngle(aTarget)
+				if (CV.bSwitchPV)
+					bSwitched = true
+					Game.ForceFirstPerson()
+				endif
+				fDist = GetDistanceByState()
+				fFov = GetFovByDistance(fDist)
+				SetCameraSpeed(CV.fSpeed * 1000)
+				LookAtRef(aTarget, (CV.fSpeed * 1000))
+				SetMouseSensitivity(fFov)
+				bZoomed = true
+				SetFOVSmooth(fFov, fFov, (CV.fSpeed * 1000))
+				if (CV.fTR && ((CV.fSpeed * 1000) > 0))
+					RegisterforSingleupdate(0.2)
+				endif
+			endif
+		endif
+	endif
+EndEvent
+
+Event OnMenuClose(string menuName)
+	if menuName == "Dialogue Menu"
+		aTarget = None
+		if GetState() == "dialogue"
+			gotostate("")
+			if bZoomed
+				bZoomed = false
+				float ftemp = (CV.fSpeed * 1000)
+				if (bSwitched && (GetPlayerPersonView() == "1st"))
+					bSwitched = false
+					ForceThirdPersonEX()
+				endif
+				SetFOVSmooth(fWorldFovIni, f1stPersonFovIni, ftemp)
+				ResetMouseSensitivity()
+			endif
+		endif
+		if (bSwitched && (GetPlayerPersonView() == "1st"))
+			bSwitched = false
+			ForceThirdPersonEX()
+		endif
+		UnregisterForKey(KeyCode)
+	endif
+EndEvent
+
+Event OnUpdate()
+endEvent
+
+Event OnKeyDown(Int iKeyCode)
+endEvent
+
+Event OnPlayerCameraState(int oldState, int newState)
+endevent
+
+state dialogue
+Event OnBeginState()
+	TROnce = 5
+endEvent
+
+Event OnEndState()
+	TROnce = 0
+endEvent
+
+Event OnMenuOpen(string menuName)
+endEvent
+
+Event OnUpdate()
+	float fDist2 = GetDistanceByState()
+	if (TROnce)
+		float diff = fDist - fDist2
+		if ((-10.0 < diff) && (diff < 10.0))
+			TROnce -= 1
+			if (CV.bDebugMsg)
+				Debug.Notification("TR Check [True] diff:" + diff + " TROnce:" + TROnce)
+			endif
+		else
+			if (bZoomed)
+				LookAtRef(aTarget, (CV.fSpeed * 1000))
+				TROnce = 5
+			endif
+			fDist = fDist2
+			if (CV.bDebugMsg)
+				Debug.Notification("TR Check [False] diff:" + diff + " TROnce:" + TROnce)
+			endif
+		endif
+		RegisterforSingleupdate(0.2)
+	endif
+endEvent
+
+Event OnKeyDown(Int iKeyCode)
+	if iKeyCode == KeyCode
+		if GetPlayerPersonView() == "1st"
+			ForceThirdPersonEX()
+			ResetMouseSensitivity()
+		else
+			Game.ForceFirstPerson()
+			SetMouseSensitivity(fFov)
+		endif
+	endif
+EndEvent
+
+Event OnPlayerCameraState(int oldState, int newState)
+	if (newState == 0 && oldState == 9) 		;3rd --> 1st
+		fDist = GetDistanceByState()
+		fFov = GetFovByDistance(fDist)
+		LookAtRef(aTarget, (CV.fSpeed * 1000))
+	elseif (newState == 9 && oldState == 0)		;1st --> 3rd
+		fDist = GetDistanceByState()
+		fFov = GetFovByDistance(fDist)
+		LookAtRef(aTarget, (CV.fSpeed * 1000))
+	endif
+endEvent
+endstate

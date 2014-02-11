@@ -1,7 +1,7 @@
 Scriptname aaatowCV extends Quest  
 
 bool property bSwitchPV auto	;switch to first person view when conversation.
-int  property SwitchMode auto	;0:direct  1:smooth
+float property SwitchMode auto	;1:change fov  0:do nothing
 float property fTR auto			;1.0:tracking npc
 float property fSpeed auto
 bool property bDebugMsg auto

@@ -3,6 +3,8 @@ Scriptname aaatowCV_Main extends ReferenceAlias
 aaatowCV Property CV Auto
 
 ;  ----------- FUNCTIONS ----------- 
+Function ForceFirstPersonSmooth() global native
+Function ForceThirdPersonSmooth() global native
 Function ForceThirdPersonEX() global native
 Actor Function GetPlayerDialogueTarget() global native
 Function SetFOVSmooth(float fov, float fpfov, float delay) global native
@@ -93,21 +95,25 @@ bool Function IsHeadingAngle(Actor Target)
 endFunction
 
 string Function GetPlayerPersonView()
-	if !Game.GetCameraState()
-		return "1st"
+	string str = none
+	if (Game.GetCameraState() == 0)
+		str = "1st"
 	else
-		return "3rd"
+		str = "3rd"
 	endif
-	return None
+	if (CV.bDebugMsg)
+		Debug.Notification("Game.GetCameraState(): " + Game.GetCameraState())
+	endif
+	return str
 endFunction
 
 
 ;  ----------- VARIABLE ----------- 
 Actor aTarget
 bool bZoomed
-bool bSwitched
 int KeyCode
 
+bool bFP
 float fDist
 float fFov
 int TROnce
@@ -124,37 +130,50 @@ Event OnInit()
 	RegisterForMenu("Dialogue Menu")
 EndEvent
 
-Function GetSetting()
-	bZoomed = false
-	bSwitched = false
-	fWorldFovIni = Utility.GetINIFloat("fDefaultWorldFOV:Display")
-	f1stPersonFovIni = Utility.GetINIFloat("fDefault1stPersonFOV:Display")
-	MouseXScaleIni = Utility.GetINIFloat("fMouseHeadingXScale:Controls")
-	MouseYScaleIni = Utility.GetINIFloat("fMouseHeadingYScale:Controls")
-	KeyCode = Input.GetMappedKey("Toggle POV")
-endFunction
-
 Event OnMenuOpen(string menuName)
 	if (menuName == "Dialogue Menu")
-		GetSetting()
+		if (CV.bDebugMsg)
+			Debug.Notification("OnMenuOpen(menuName):" + menuName)
+		endif
+
+		bZoomed = false
+		bFP = !Game.GetCameraState()
+		fWorldFovIni = Utility.GetINIFloat("fDefaultWorldFOV:Display")
+		f1stPersonFovIni = Utility.GetINIFloat("fDefault1stPersonFOV:Display")
+		MouseXScaleIni = Utility.GetINIFloat("fMouseHeadingXScale:Controls")
+		MouseYScaleIni = Utility.GetINIFloat("fMouseHeadingYScale:Controls")
+		KeyCode = Input.GetMappedKey("Toggle POV")
+
 		aTarget = GetPlayerDialogueTarget()
 		if aTarget
 			gotostate("dialogue")
 			RegisterForKey(KeyCode)
 			if IsHeadingAngle(aTarget)
 				if (CV.bSwitchPV)
-					bSwitched = true
-					Game.ForceFirstPerson()
+					if (CV.bDebugMsg)
+						Debug.Notification("SwitchMode :" + CV.SwitchMode)
+					endif
+					if (CV.SwitchMode)
+						Game.ForceFirstPerson()
+					else
+						ForceFirstPersonSmooth()
+					endif
 				endif
 				fDist = GetDistanceByState()
 				fFov = GetFovByDistance(fDist)
 				SetCameraSpeed(CV.fSpeed * 1000)
 				LookAtRef(aTarget, (CV.fSpeed * 1000))
-				SetMouseSensitivity(fFov)
-				bZoomed = true
-				SetFOVSmooth(fFov, fFov, (CV.fSpeed * 1000))
+				if (CV.SwitchMode)
+					bZoomed = true
+					SetMouseSensitivity(fFov)
+					SetFOVSmooth(fFov, fFov, (CV.fSpeed * 1000))
+				endif
 				if (CV.fTR && ((CV.fSpeed * 1000) > 0))
 					RegisterforSingleupdate(0.2)
+				endif
+			else
+				if (CV.bDebugMsg)
+					Debug.Notification("IsHeadingAngle(aTarget):" + IsHeadingAngle(aTarget))
 				endif
 			endif
 		endif
@@ -162,24 +181,35 @@ Event OnMenuOpen(string menuName)
 EndEvent
 
 Event OnMenuClose(string menuName)
-	if menuName == "Dialogue Menu"
+	if (menuName == "Dialogue Menu")
+		if (CV.bDebugMsg)
+			Debug.Notification("OnMenuClose(menuName):" + menuName)
+		endif
 		aTarget = None
 		if GetState() == "dialogue"
 			gotostate("")
-			if bZoomed
-				bZoomed = false
-				float ftemp = (CV.fSpeed * 1000)
-				if (bSwitched && (GetPlayerPersonView() == "1st"))
-					bSwitched = false
-					ForceThirdPersonEX()
+			if (bFP)
+				if (GetPlayerPersonView() == "3rd")
+					if (CV.SwitchMode)
+						Game.ForceFirstPerson()
+					else
+						ForceFirstPersonSmooth()
+					endif
 				endif
-				SetFOVSmooth(fWorldFovIni, f1stPersonFovIni, ftemp)
+			else
+				if (GetPlayerPersonView() == "1st")
+					if (CV.SwitchMode)
+						ForceThirdPersonEX()
+					else
+						ForceThirdPersonSmooth()
+					endif
+				endif
+			endif
+			if (bZoomed)
+				bZoomed = false
+				SetFOVSmooth(fWorldFovIni, f1stPersonFovIni, (CV.fSpeed * 1000))
 				ResetMouseSensitivity()
 			endif
-		endif
-		if (bSwitched && (GetPlayerPersonView() == "1st"))
-			bSwitched = false
-			ForceThirdPersonEX()
 		endif
 		UnregisterForKey(KeyCode)
 	endif
@@ -216,10 +246,8 @@ Event OnUpdate()
 				Debug.Notification("TR Check [True] diff:" + diff + " TROnce:" + TROnce)
 			endif
 		else
-			if (bZoomed)
-				LookAtRef(aTarget, (CV.fSpeed * 1000))
-				TROnce = 5
-			endif
+			LookAtRef(aTarget, (CV.fSpeed * 1000))
+			TROnce = 5
 			fDist = fDist2
 			if (CV.bDebugMsg)
 				Debug.Notification("TR Check [False] diff:" + diff + " TROnce:" + TROnce)
@@ -230,13 +258,21 @@ Event OnUpdate()
 endEvent
 
 Event OnKeyDown(Int iKeyCode)
-	if iKeyCode == KeyCode
-		if GetPlayerPersonView() == "1st"
-			ForceThirdPersonEX()
-			ResetMouseSensitivity()
+	if (iKeyCode == KeyCode)
+		if (GetPlayerPersonView() == "1st")
+			if (CV.SwitchMode)
+				ForceThirdPersonEX()
+				ResetMouseSensitivity()
+			else
+				ForceThirdPersonSmooth()
+			endif
 		else
-			Game.ForceFirstPerson()
-			SetMouseSensitivity(fFov)
+			if (CV.SwitchMode)
+				Game.ForceFirstPerson()
+				SetMouseSensitivity(fFov)
+			else
+				ForceFirstPersonSmooth()
+			endif
 		endif
 	endif
 EndEvent

@@ -8,19 +8,24 @@ int SpeedID
 int TrackingID
 int[] DistID
 
-int NOT_FOUND = -1
-
 String[] sSwitchMode
 String[] sTR
 
 int function GetVersion()
-	return 5
+	return 6
 endFunction
 
 Event OnVersionUpdate(int a_version)
-	if (a_version >= 5 && CurrentVersion < 5)
-		MyInit()
+	if !(a_version >= 6 && CurrentVersion < 6)
+		return
 	endif
+	DistID = new int[6]
+	sTR = new string[2]
+	sTR[0] = "$DoNothing"
+	sTR[1] = "$Tracking"
+	sSwitchMode = new string[2]
+	sSwitchMode[0] = "$PovMode"
+	sSwitchMode[1] = "$FovMode"
 endEvent
 
 Event OnConfigInit()
@@ -28,16 +33,13 @@ Event OnConfigInit()
 	sTR = new string[2]
 	sTR[0] = "$DoNothing"
 	sTR[1] = "$Tracking"
+	sSwitchMode = new string[2]
+	sSwitchMode[0] = "$PovMode"
+	sSwitchMode[1] = "$FovMode"
 endEvent
 
-function MyInit()
-
-endFunction
-
 Event OnPageReset(String a_Page)
-
 ; 	======================== LEFT ========================
-
 	SetCursorFillMode(TOP_TO_BOTTOM)
 	AddHeaderOption("$FOVHeader")
 	DistID[0] = AddSliderOption("$Distance0", CV.FoVSet[0], "$FOV")
@@ -54,8 +56,8 @@ Event OnPageReset(String a_Page)
 
 	AddHeaderOption("$DebugHeader")
 	SwitchID = AddToggleOption("$SwitchFP", CV.bSwitchPV)
+	ModeID = AddTextOption("$SwitchMode", sSwitchMode[CV.SwitchMode as int])
 	DebugMsgID = AddToggleOption("$DebugMessage", CV.bDebugMsg)
-; 	ModeID = AddTextOption("$SwitchMode", sSwitchMode[CV.SwitchMode])
 
 ; 	======================== RIGHT ========================
 
@@ -68,12 +70,12 @@ event OnOptionSelect(int option)
 	elseif (option == DebugMsgID)
 		CV.bDebugMsg = !CV.bDebugMsg
 		SetToggleOptionValue(option, CV.bDebugMsg)
-; 	elseif (option == ModeID)
-; 		CV.SwitchMode = CycleTEXT(sSwitchMode, CV.SwitchMode)
-; 		SetTextOptionValue(Option, sSwitchMode[CV.SwitchMode])
+	elseif (option == ModeID)
+		CV.SwitchMode = CycleTEXT(sSwitchMode, CV.SwitchMode)
+		SetTextOptionValue(Option, sSwitchMode[CV.SwitchMode as int])
 	elseif (option == TrackingID)
 		CV.fTR = CycleTEXT(sTR, CV.fTR)
-		SetTextOptionValue(Option, sTR[(CV.fTR as int)])
+		SetTextOptionValue(Option, sTR[CV.fTR as int])
 	endif
 endEvent
 
@@ -83,7 +85,7 @@ event OnOptionSliderOpen(int option)
 		SetSliderDialogDefaultValue(0.7)
 		SetSliderDialogRange(0.0, 2.0)
 		SetSliderDialogInterval(0.1)
-	elseif (DistID.find(option) > NOT_FOUND)
+	elseif ExistedInArray(DistID,option)
 		int index = DistID.find(option)
 		SetSliderDialogStartValue(CV.FoVSet[index])
 		SetSliderDialogDefaultValue(CV.FoVSetDefault[index])
@@ -96,7 +98,7 @@ event OnOptionSliderAccept(int option, float value)
 	if (option == SpeedID)
 		CV.fSpeed = value
 		SetSliderOptionValue(SpeedID, CV.fSpeed, "$SEC1")
-	elseif DistID.find(option) > NOT_FOUND
+	elseif ExistedInArray(DistID,option)
 		int index = DistID.find(option)
 		CV.FoVSet[index] = value as int
 		SetSliderOptionValue(DistID[index], CV.FoVSet[index], "$FOV")
@@ -108,13 +110,13 @@ Event OnOptionHighlight(int option)
 		SetInfoText("$SwitchIDInfo")
 	elseif (option == SpeedID)
 		SetInfoText("$SpeedIDInfo")
-; 	elseif (option == ModeID)
-; 		SetInfoText("$ModeIDInfo")
+	elseif (option == ModeID)
+		SetInfoText("$ModeIDInfo")
 	elseif (option == TrackingID)
 		SetInfoText("$TrackingIDInfo")
 	elseif (option == DebugMsgID)
 		SetInfoText("$DebugMsgIDInfo")
-	elseif DistID.find(option) > NOT_FOUND
+	elseif ExistedInArray(DistID,option)
 		SetInfoText("$DistIDInfo")
 	endif
 endEvent
@@ -137,4 +139,11 @@ float Function CycleTEXT(string[] s, float fnum)
 		fnum = 0.0
 	endif
 	return fnum
+endFunction
+
+bool Function ExistedInArray(int[] IDs, int opt)
+	if IDs.find(opt) > -1
+		return true
+	endif
+	return false
 endFunction

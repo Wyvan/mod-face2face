@@ -62,6 +62,35 @@ Function ResetMouseSensitivity()
 	Utility.SetINIFloat("fMouseHeadingYScale:Controls", MouseYScaleIni)
 endFunction
 
+Function ResetAllSetting()
+	if (CV.bReset)
+		CV.bReset = false
+		bDialogue = false
+		fWorldFovIni = Utility.GetINIFloat("fDefaultWorldFOV:Display")
+		f1stPersonFovIni = Utility.GetINIFloat("fDefault1stPersonFOV:Display")
+		MouseXScaleIni = Utility.GetINIFloat("fMouseHeadingXScale:Controls")
+		MouseYScaleIni = Utility.GetINIFloat("fMouseHeadingYScale:Controls")
+
+		if (CV.bDebugMsg)
+			debug.Notification("[before] fWorldFovIni:" + fWorldFovIni + "f1stPersonFovIni:" + f1stPersonFovIni)
+			debug.Notification("[before] MouseXScaleIni:" + MouseXScaleIni + "MouseYScaleIni:" + MouseYScaleIni)
+		endif
+
+		fWorldFovIni = CV.fResetSetting[0]
+		f1stPersonFovIni = CV.fResetSetting[1]
+		MouseXScaleIni = CV.fResetSetting[2]
+		MouseYScaleIni = CV.fResetSetting[3]
+		
+		ResetFov()
+		ResetMouseSensitivity()
+
+		if (CV.bDebugMsg)
+			debug.Notification("[after] fWorldFovIni:" + fWorldFovIni + "f1stPersonFovIni:" + f1stPersonFovIni)
+			debug.Notification("[after] MouseXScaleIni:" + MouseXScaleIni + "MouseYScaleIni:" + MouseYScaleIni)
+		endif
+	endif
+endFunction
+
 bool Function IsHeadingAngle(Actor Target)
 	Actor aPlayer = Game.GetPlayer()
 	float fShoulderX	;クロスヘアがプレイヤーから見てどちらにあるか。 左側<0.0 真ん中<右側
@@ -121,6 +150,9 @@ float MouseYScaleIni
 
 ;  ----------- EVENTS ----------- 
 Event OnInit()
+	if (CV.bReset)
+		ResetAllSetting()
+	endif
 	RegisterForCameraState()
 	RegisterForMenu("Dialogue Menu")
 	RegisterForConversationFunction()
@@ -128,6 +160,9 @@ Event OnInit()
 EndEvent
 
 Event OnPlayerLoadGame()
+	if (CV.bReset)
+		ResetAllSetting()
+	endif
 	RegisterForCameraState()
 	RegisterForMenu("Dialogue Menu")
 	RegisterForConversationFunction()

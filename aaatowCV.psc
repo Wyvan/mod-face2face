@@ -17,3 +17,15 @@ int[] property FoVSet auto
 int[] property FoVSetDefault auto
 
 Quest Property MainQuest auto
+
+Function ForceFirstPersonSmooth() global native
+Function ForceThirdPersonSmooth() global native
+Function ForceThirdPersonEX() global native
+Function SetFOVSmooth(float fov, float fpfov, float delay) global native
+Function SetCameraSpeed(float fSpeed) global native
+Function LookAtRef(ObjectReference akRef, float fSpeed) global native
+Function LookAtActor(ObjectReference akRef, float fSpeed) global native
+float Function GetActorDistance(ObjectReference akRef) global native
+bool Function IsFirstPerson() global native
+bool Function IsDragonType(Actor akActor) global native
+Function PapyrusTrace(string str) global native
